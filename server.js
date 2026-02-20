@@ -6,15 +6,29 @@ const app  = express();
 
 const dbUrl = process.env.DATABASE_URL;
 console.log('DATABASE_URL present:', !!dbUrl);
-console.log('DATABASE_URL host:', dbUrl ? dbUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') : 'NOT SET');
 
 const pool = new Pool({
   connectionString: dbUrl,
   ssl: dbUrl ? { rejectUnauthorized: false } : false,
+  max: 3,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
 });
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
+
+// ── Retry helper ─────────────────────────────────────────
+async function query(text, params, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await pool.query(text, params);
+    } catch (e) {
+      if (i === retries - 1) throw e;
+      await new Promise(r => setTimeout(r, 300 * (i + 1)));
+    }
+  }
+}
 
 // ── Create table on startup ──────────────────────────────
 pool.query(`
@@ -36,7 +50,7 @@ app.get('/api/scores/:mode', async (req, res) => {
   if (!['trainee','idol','legend'].includes(mode))
     return res.status(400).json({ error: 'Invalid mode' });
   try {
-    const { rows } = await pool.query(
+    const { rows } = await query(
       `SELECT id, name, time_str, moves, created_at
          FROM scores
         WHERE mode = $1
@@ -61,7 +75,7 @@ app.post('/api/scores', async (req, res) => {
 
   name = String(name).trim().slice(0, 16) || 'Hunter';
   try {
-    const { rows } = await pool.query(
+    const { rows } = await query(
       `INSERT INTO scores (name, mode, time_ms, time_str, moves)
        VALUES ($1,$2,$3,$4,$5) RETURNING id`,
       [name, mode, time_ms, time_str, moves]
