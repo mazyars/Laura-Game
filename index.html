@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Laura's Memory Game • KPop Demon Hunters</title>
+  <!-- PWA / icon meta -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Laura's Game" />
+  <meta name="theme-color" content="#0D0015" />
+  <link rel="apple-touch-icon" id="ati" />
+  <link rel="icon" type="image/png"  id="fav" />
+  <style>
+    :root {
+      --bg:     #0D0015;
+      --bg2:    #0A0025;
+      --dp:     #1A0033;
+      --purple: #6600CC;
+      --ep:     #8B00FF;
+      --np:     #CC44FF;
+      --lp:     #AA66FF;
+      --blue:   #1A0099;
+      --eb:     #3366FF;
+      --ib:     #88AAFF;
+      --pink:   #FF0080;
+      --text:   #F0EEFF;
+      --dim:    #5533AA;
+      --gold:   #FFD700;
+      --cw:     128px;
+      --ch:     174px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Trebuchet MS', 'Lucida Grande', 'Lucida Sans Unicode', sans-serif;
+      overflow-x: hidden;
+      /* Smooth momentum scrolling on iOS */
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── Background ── */
+    .bg-mesh {
+      position: fixed; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 65% 50% at 8%  60%,  rgba(139,0,255,.18)  0%, transparent 100%),
+        radial-gradient(ellipse 55% 40% at 92% 20%,  rgba(51,102,255,.13)  0%, transparent 100%),
+        radial-gradient(ellipse 80% 60% at 50% 110%, rgba(139,0,255,.22)  0%, transparent 100%),
+        radial-gradient(ellipse 40% 30% at 68% 72%,  rgba(255,0,128,.07)  0%, transparent 100%),
+        linear-gradient(165deg, #0D0015 0%, #0A0025 45%, #0D0015 100%);
+      animation: breathe 14s ease-in-out infinite alternate;
+    }
+    @keyframes breathe {
+      from { filter: hue-rotate(0deg)   brightness(1);   }
+      to   { filter: hue-rotate(22deg)  brightness(.88); }
+    }
+
+    canvas#sparkles { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+
+    /* CRT scanlines */
+    .scanlines {
+      position: fixed; inset: 0; z-index: 2; pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent 0px, transparent 3px,
+        rgba(0,0,0,.07) 3px, rgba(0,0,0,.07) 4px
+      );
+    }
+
+    /* ── Wrap ── */
+    .wrap {
+      position: relative; z-index: 3;
+      max-width: 700px; margin: 0 auto;
+      padding: 40px 20px 60px;
+      display: flex; flex-direction: column; align-items: center;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    header { text-align: center; margin-bottom: 6px; }
+
+    .band-tag {
+      display: inline-block;
+      font-size: 9px; letter-spacing: 8px; text-transform: uppercase;
+      color: var(--np);
+      border: 1px solid rgba(204,68,255,.35);
+      padding: 5px 18px; margin-bottom: 16px;
+      text-shadow: 0 0 10px var(--ep);
+      box-shadow: 0 0 12px rgba(139,0,255,.2), inset 0 0 8px rgba(139,0,255,.06);
+    }
+
+    /* Glitch title */
+    .glitch-wrap { position: relative; display: inline-block; margin-bottom: 8px; }
+
+    .glitch-title {
+      font-size: clamp(26px, 5.5vw, 50px);
+      font-weight: 900; letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--text);
+      text-shadow:
+        0 0 18px rgba(139,0,255,.85),
+        0 0 40px rgba(139,0,255,.4),
+        0 0 80px rgba(51,102,255,.25);
+    }
+    .glitch-title::before,
+    .glitch-title::after {
+      content: attr(data-text);
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      font-size: inherit; font-weight: inherit;
+      letter-spacing: inherit; text-transform: inherit;
+    }
+    .glitch-title::before {
+      color: var(--np);
+      clip-path: polygon(0 28%, 100% 28%, 100% 48%, 0 48%);
+      animation: glitchA 6s infinite;
+    }
+    .glitch-title::after {
+      color: var(--eb);
+      clip-path: polygon(0 62%, 100% 62%, 100% 78%, 0 78%);
+      animation: glitchB 6s .1s infinite;
+    }
+    @keyframes glitchA {
+      0%,88%,100% { transform: none; opacity: 0; }
+      89%  { transform: translateX(-5px) skewX(-2deg); opacity: .75; }
+      90%  { transform: translateX( 4px); opacity: .75; }
+      91%  { transform: translateX(-2px); opacity: 0; }
+    }
+    @keyframes glitchB {
+      0%,90%,100% { transform: none; opacity: 0; }
+      91%  { transform: translateX( 6px) skewX(3deg); opacity: .65; }
+      92%  { transform: translateX(-4px); opacity: .65; }
+      93%  { transform: none; opacity: 0; }
+    }
+
+    .subtitle {
+      font-size: 10px; letter-spacing: 5px;
+      color: var(--ib); text-transform: uppercase;
+      opacity: .65;
+    }
+
+    /* ── Rule ── */
+    .rule {
+      width: min(460px, 90%); display: flex;
+      align-items: center; gap: 10px; margin: 26px 0;
+    }
+    .rule-line {
+      flex: 1; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--ep), var(--eb), transparent);
+    }
+    .rule-gem { font-size: 10px; color: var(--np); text-shadow: 0 0 8px var(--ep); }
+
+    /* ── Scoreboard ── */
+    .scoreboard {
+      display: flex; gap: 0;
+      margin-bottom: 32px;
+      background: rgba(26,0,51,.55);
+      border: 1px solid rgba(139,0,255,.45);
+      box-shadow: 0 0 22px rgba(139,0,255,.22), inset 0 0 22px rgba(139,0,255,.06);
+      backdrop-filter: blur(10px);
+      position: relative; overflow: hidden;
+    }
+    .scoreboard::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--np), var(--eb), transparent);
+    }
+    .scoreboard::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--ep), transparent);
+    }
+
+    .stat {
+      padding: 14px 28px; text-align: center;
+      border-right: 1px solid rgba(139,0,255,.2);
+    }
+    .stat:last-child { border-right: none; }
+    .stat-lbl {
+      display: block; font-size: 8px; letter-spacing: 4px;
+      text-transform: uppercase; color: var(--np);
+      margin-bottom: 5px; opacity: .8;
+    }
+    .stat-val {
+      display: block; font-size: 27px; font-weight: 900; letter-spacing: 2px;
+      background: linear-gradient(135deg, var(--text) 30%, var(--np));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 8px rgba(204,68,255,.65));
+    }
+
+    /* ── Board ── */
+    .board {
+      display: grid;
+      grid-template-columns: repeat(4, var(--cw));
+      gap: 12px;
+      perspective: 1500px;
+      max-width: 100%;
+    }
+
+    /* ── Card ── */
+    .card {
+      width: var(--cw); height: var(--ch);
+      cursor: pointer;
+      transform-style: preserve-3d;
+      transition: transform .55s cubic-bezier(.4,0,.2,1);
+      animation: cardReveal .5s ease-out backwards;
+    }
+    @keyframes cardReveal {
+      from { opacity: 0; transform: translateY(28px) scale(.82) rotateY(-15deg); }
+      to   { opacity: 1; transform: none; }
+    }
+    .card:not(.flipped):not(.matched):hover {
+      transform: translateY(-7px) scale(1.05);
+      filter: brightness(1.2);
+    }
+    .card.flipped { transform: rotateY(180deg); }
+    .card.matched { transform: rotateY(180deg); cursor: default; }
+
+    @keyframes matchPop {
+      0%  { transform: rotateY(180deg) scale(1); }
+      42% { transform: rotateY(180deg) scale(1.1); }
+      100%{ transform: rotateY(180deg) scale(1); }
+    }
+    .card.matched { animation: matchPop .45s ease-out; }
+
+    @keyframes wrongShake {
+      0%,100% { transform: rotateY(180deg) translateX(0); }
+      20% { transform: rotateY(180deg) translateX(-9px); }
+      40% { transform: rotateY(180deg) translateX(9px); }
+      60% { transform: rotateY(180deg) translateX(-5px); }
+      80% { transform: rotateY(180deg) translateX(5px); }
+    }
+    .card.wrong { animation: wrongShake .42s ease-in-out; }
+
+    .face, .back {
+      position: absolute; inset: 0;
+      border-radius: 7px;
+      backface-visibility: hidden;
+    }
+
+    /* ── Card Back ── */
+    .back {
+      background: #130025;
+      border: 1px solid rgba(139,0,255,.65);
+      box-shadow: 0 0 14px rgba(139,0,255,.3), inset 0 0 14px rgba(139,0,255,.08);
+      overflow: hidden;
+    }
+    /* Hex grid */
+    .back::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient( 60deg, transparent 45.5%, rgba(139,0,255,.22) 46%, rgba(139,0,255,.22) 54%, transparent 54.5%),
+        linear-gradient(120deg, transparent 45.5%, rgba(139,0,255,.22) 46%, rgba(139,0,255,.22) 54%, transparent 54.5%),
+        linear-gradient(180deg, transparent 45.5%, rgba(102,0,204,.18) 46%, rgba(102,0,204,.18) 54%, transparent 54.5%);
+      background-size: 22px 38px;
+    }
+    /* Holographic shimmer */
+    .back::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(
+        128deg,
+        transparent      0%,
+        rgba(204,68,255,.22) 18%,
+        rgba(51,102,255,.18) 38%,
+        rgba(136,170,255,.14) 54%,
+        rgba(255,0,128,.10)  70%,
+        rgba(139,0,255,.16)  85%,
+        transparent      100%
+      );
+      background-size: 300% 300%;
+      animation: holo 3.8s ease infinite;
+    }
+    @keyframes holo {
+      0%   { background-position: 0% 0%; }
+      50%  { background-position: 100% 100%; }
+      100% { background-position: 0% 0%; }
+    }
+    .back-inner {
+      position: absolute; inset: 9px;
+      border: 1px solid rgba(204,68,255,.22);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 7px; z-index: 1;
+    }
+    .back-icon { font-size: 28px; opacity: .5; filter: drop-shadow(0 0 8px rgba(204,68,255,.6)); }
+    .back-lbl  { font-size: 7px; letter-spacing: 4px; color: rgba(204,68,255,.45); text-transform: uppercase; }
+
+    /* ── Card Front ── */
+    .face {
+      transform: rotateY(180deg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 14px 10px; gap: 5px;
+      border: 1px solid rgba(139,0,255,.3);
+      position: relative; overflow: hidden;
+    }
+    /* glow blob */
+    .face::before {
+      content: '';
+      position: absolute; top: -5px; left: 50%;
+      transform: translateX(-50%);
+      width: 88px; height: 88px;
+      border-radius: 50%; filter: blur(28px); opacity: .32;
+    }
+    /* bottom ornament */
+    .face::after {
+      content: '✦  ✦  ✦';
+      position: absolute; bottom: 8px;
+      font-size: 7px; letter-spacing: 5px;
+      opacity: .28; color: var(--np);
+    }
+
+    .card-emoji { font-size: 40px; position: relative; z-index: 1; line-height: 1; }
+    .card-name  {
+      font-size: 16px; font-weight: 900; letter-spacing: 4px;
+      text-transform: uppercase; color: var(--text);
+      position: relative; z-index: 1;
+      text-shadow: 0 0 12px rgba(255,255,255,.35);
+    }
+    .card-kr {
+      font-size: 10px; letter-spacing: 2px;
+      color: var(--np); opacity: .7;
+      position: relative; z-index: 1;
+    }
+    .card-power {
+      font-size: 8px; letter-spacing: 2px;
+      text-transform: uppercase; text-align: center;
+      position: relative; z-index: 1; line-height: 1.5;
+    }
+
+    /* Matched glow shimmer */
+    .matched .face {
+      border-color: var(--np);
+      animation: matchedGlow 2s ease-in-out infinite;
+    }
+    @keyframes matchedGlow {
+      0%,100% { border-color: var(--np); box-shadow: 0 0 20px rgba(204,68,255,.55), inset 0 0 18px rgba(139,0,255,.1); }
+      50%      { border-color: var(--eb); box-shadow: 0 0 30px rgba(51,102,255,.65), inset 0 0 22px rgba(51,102,255,.12); }
+    }
+
+    /* ── Character themes ── */
+    .ch-luna  .face { background: linear-gradient(150deg,#040A1C,#06102A); }
+    .ch-luna  .face::before { background: #88AAFF; }
+    .ch-luna  .card-power   { color: #88AAFF; }
+
+    .ch-yuna  .face { background: linear-gradient(150deg,#110020,#1A002E); }
+    .ch-yuna  .face::before { background: #DD44FF; }
+    .ch-yuna  .card-power   { color: #DD44FF; }
+
+    .ch-seira .face { background: linear-gradient(150deg,#0B001E,#12002A); }
+    .ch-seira .face::before { background: #7722CC; }
+    .ch-seira .card-power   { color: #AA66EE; }
+
+    .ch-hana  .face { background: linear-gradient(150deg,#14001C,#1E0028); }
+    .ch-hana  .face::before { background: #CC88FF; }
+    .ch-hana  .card-power   { color: #CC88FF; }
+
+    .ch-mira  .face { background: linear-gradient(150deg,#001620,#001C2C); }
+    .ch-mira  .face::before { background: #00CCDD; }
+    .ch-mira  .card-power   { color: #44DDEE; }
+
+    .ch-jiwoo .face { background: linear-gradient(150deg,#030A24,#050D30); }
+    .ch-jiwoo .face::before { background: #3366FF; }
+    .ch-jiwoo .card-power   { color: #6688FF; }
+
+    .ch-dasom .face { background: linear-gradient(150deg,#160012,#20001C); }
+    .ch-dasom .face::before { background: #FF00BB; }
+    .ch-dasom .card-power   { color: #FF44CC; }
+
+    .ch-yuki  .face { background: linear-gradient(150deg,#0D001E,#14002C); }
+    .ch-yuki  .face::before { background: #9900FF; }
+    .ch-yuki  .card-power   { color: #BB44FF; }
+
+    /* ── Button ── */
+    .btn {
+      margin-top: 28px; padding: 12px 46px;
+      background: transparent;
+      border: 1px solid var(--ep);
+      color: var(--np); font-family: inherit;
+      font-size: 10px; letter-spacing: 6px; text-transform: uppercase;
+      cursor: pointer; position: relative; overflow: hidden;
+      transition: color .3s;
+      box-shadow: 0 0 16px rgba(139,0,255,.28);
+    }
+    .btn::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, var(--ep) 0%, var(--eb) 100%);
+      transform: scaleX(0); transform-origin: left;
+      transition: transform .3s ease;
+    }
+    .btn:hover { color: #fff; }
+    .btn:hover::before { transform: scaleX(1); }
+    .btn span { position: relative; z-index: 1; }
+
+    /* ── Victory ── */
+    .victory {
+      position: fixed; inset: 0; z-index: 300;
+      background: rgba(13,0,21,.97);
+      display: none; align-items: center;
+      justify-content: flex-start; flex-direction: column;
+      gap: 0; text-align: center;
+      overflow-y: auto; overflow-x: hidden;
+      padding: 30px 20px 40px;
+      -webkit-overflow-scrolling: touch;
+    }
+    /* Center vertically only when content fits */
+    @media (min-height: 750px) {
+      .victory { justify-content: center; }
+    }
+    .victory.show { display: flex; animation: victIn .7s ease; }
+    @keyframes victIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+
+    /* Mission complete tag */
+    .v-tag {
+      font-size: 9px; letter-spacing: 9px; text-transform: uppercase;
+      color: var(--np); opacity: .65; margin-bottom: 10px;
+    }
+
+    /* 승리! */
+    .v-win {
+      font-size: clamp(52px, 11vw, 82px); font-weight: 900; line-height: 1;
+      background: linear-gradient(135deg, var(--np) 0%, var(--eb) 50%, var(--pink) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      filter: drop-shadow(0 0 28px rgba(204,68,255,.9));
+      animation: winPulse 2.8s ease-in-out infinite;
+      margin-bottom: 6px;
+    }
+    @keyframes winPulse {
+      0%,100% { filter: drop-shadow(0 0 28px rgba(204,68,255,.9)); }
+      50%      { filter: drop-shadow(0 0 60px rgba(51,102,255,1)); }
+    }
+
+    /* CONGRATULATIONS */
+    .v-congrats {
+      font-size: clamp(22px, 4.5vw, 38px); font-weight: 900;
+      letter-spacing: 5px; text-transform: uppercase;
+      color: var(--text);
+      text-shadow: 0 0 20px rgba(204,68,255,.5), 0 0 50px rgba(51,102,255,.3);
+      margin-bottom: 4px;
+    }
+    .v-congrats-sub {
+      font-size: 11px; letter-spacing: 5px; color: var(--dim);
+      text-transform: uppercase; margin-bottom: 22px;
+    }
+
+    /* Results panel */
+    .v-results {
+      display: flex; gap: 0;
+      border: 1px solid rgba(139,0,255,.35);
+      background: rgba(26,0,51,.5);
+      backdrop-filter: blur(8px);
+      position: relative; overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .v-results::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--np), var(--eb), transparent);
+    }
+    .v-result-item {
+      padding: 12px 26px; text-align: center;
+      border-right: 1px solid rgba(139,0,255,.2);
+    }
+    .v-result-item:last-child { border-right: none; }
+    .v-result-lbl {
+      display: block; font-size: 8px; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--np); margin-bottom: 4px; opacity: .8;
+    }
+    .v-result-val {
+      display: block; font-size: 24px; font-weight: 900; letter-spacing: 2px;
+      background: linear-gradient(135deg, var(--text), var(--np));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      filter: drop-shadow(0 0 6px rgba(204,68,255,.5));
+    }
+
+    /* Star rating */
+    .v-rating {
+      margin-bottom: 22px;
+    }
+    .v-stars {
+      font-size: 28px; letter-spacing: 6px;
+      filter: drop-shadow(0 0 8px rgba(204,68,255,.7));
+      display: block; margin-bottom: 4px;
+    }
+    .v-rank {
+      font-size: 10px; letter-spacing: 5px; text-transform: uppercase;
+      color: var(--np);
+    }
+
+    /* Laura's message card */
+    .v-message-card {
+      max-width: 420px; width: 100%;
+      border: 1px solid rgba(204,68,255,.3);
+      background: rgba(20,0,44,.65);
+      backdrop-filter: blur(8px);
+      padding: 22px 26px;
+      position: relative; overflow: hidden;
+      margin-bottom: 22px;
+    }
+    .v-message-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(139,0,255,.06) 0%, rgba(51,102,255,.04) 100%);
+    }
+    .v-message-from {
+      font-size: 8px; letter-spacing: 5px; text-transform: uppercase;
+      color: var(--np); opacity: .7; margin-bottom: 12px;
+    }
+    .v-message-text {
+      font-size: 14px; line-height: 1.75; color: var(--text);
+      font-style: italic; position: relative; z-index: 1;
+    }
+    .v-message-text em { font-style: normal; color: var(--np); }
+    .v-sig {
+      margin-top: 14px; font-size: 13px; font-weight: 700;
+      letter-spacing: 2px; color: var(--text);
+      position: relative; z-index: 1;
+    }
+    .v-sig span { color: var(--np); }
+
+    .v-stats { display: flex; gap: 36px; margin: 8px 0; } /* keep for compat */
+
+    /* ── Victory — high score entry ── */
+    .v-hs-banner {
+      display: none;
+      font-size: 13px; letter-spacing: 4px; font-weight: 900;
+      text-transform: uppercase; color: var(--gold);
+      text-shadow: 0 0 16px rgba(255,215,0,.65);
+      animation: winPulse 2s ease-in-out infinite;
+      margin-bottom: 2px;
+    }
+    .v-hs-entry {
+      display: none; flex-direction: column;
+      align-items: center; gap: 10px; margin-bottom: 16px;
+    }
+    .v-hs-hint { font-size: 9px; letter-spacing: 3px; color: var(--dim); text-transform: uppercase; }
+    .v-hs-row  { display: flex; gap: 0; }
+    .v-hs-input {
+      background: rgba(20,0,44,.85);
+      border: 1px solid rgba(204,68,255,.5); border-right: none;
+      color: var(--text); font-family: inherit;
+      font-size: 14px; letter-spacing: 3px;
+      padding: 10px 18px; width: 190px;
+      outline: none; transition: border-color .2s, box-shadow .2s;
+    }
+    .v-hs-input:focus { border-color: var(--np); box-shadow: 0 0 14px rgba(204,68,255,.4); }
+    .v-hs-input::placeholder { color: var(--dim); font-size: 11px; letter-spacing: 2px; }
+    .v-hs-save {
+      padding: 10px 22px;
+      background: linear-gradient(135deg, var(--ep), var(--eb));
+      border: none; color: #fff; font-family: inherit;
+      font-size: 9px; letter-spacing: 4px; text-transform: uppercase;
+      cursor: pointer; transition: opacity .2s; white-space: nowrap;
+    }
+    .v-hs-save:hover { opacity: .82; }
+
+    /* ── Leaderboard overlay ── */
+    .leaderboard {
+      position: fixed; inset: 0; z-index: 400;
+      background: rgba(13,0,21,.97);
+      display: none; align-items: center;
+      justify-content: flex-start; flex-direction: column;
+      gap: 18px; padding: 30px 16px 40px;
+      overflow-y: auto; overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    @media (min-height: 700px) {
+      .leaderboard { justify-content: center; }
+    }
+    .leaderboard.show { display: flex; animation: victIn .5s ease; }
+
+    .lb-eyebrow { font-size: 9px; letter-spacing: 8px; text-transform: uppercase; color: var(--np); opacity: .65; margin-bottom: 6px; }
+    .lb-title   {
+      font-size: clamp(22px, 5vw, 40px); font-weight: 900;
+      letter-spacing: 5px; text-transform: uppercase;
+      text-shadow: 0 0 22px rgba(139,0,255,.7), 0 0 50px rgba(51,102,255,.3);
+    }
+
+    .lb-tabs {
+      display: flex; gap: 0;
+      border: 1px solid rgba(139,0,255,.38);
+    }
+    .lb-tab {
+      padding: 9px 26px;
+      background: transparent; border: none;
+      border-right: 1px solid rgba(139,0,255,.2);
+      color: var(--dim); font-family: inherit;
+      font-size: 9px; letter-spacing: 4px; text-transform: uppercase;
+      cursor: pointer; transition: all .2s;
+    }
+    .lb-tab:last-child { border-right: none; }
+    .lb-tab:hover  { color: var(--np); background: rgba(139,0,255,.08); }
+    .lb-tab.active { color: var(--text); background: rgba(139,0,255,.18); box-shadow: inset 0 -2px 0 var(--np); }
+
+    .lb-table-wrap {
+      width: min(540px, 96%);
+      border: 1px solid rgba(139,0,255,.32);
+      background: rgba(20,0,44,.6);
+      backdrop-filter: blur(8px);
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      position: relative;
+    }
+    .lb-table-wrap::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--np), var(--eb), transparent);
+    }
+    .lb-table { width: 100%; border-collapse: collapse; }
+    .lb-table thead th {
+      font-size: 8px; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--np); padding: 11px 16px; text-align: left;
+      border-bottom: 1px solid rgba(139,0,255,.22);
+      background: rgba(139,0,255,.07);
+    }
+    .lb-row td { padding: 10px 16px; font-size: 13px; border-bottom: 1px solid rgba(139,0,255,.08); color: var(--dim); }
+    .lb-row:last-child td { border-bottom: none; }
+    .lb-rank  { font-size: 17px !important; width: 40px; }
+    .lb-name  { font-weight: 700; color: var(--text) !important; letter-spacing: 1px; }
+    .lb-time  { color: var(--np) !important; font-weight: 700; letter-spacing: 1px; }
+    .lb-moves { color: var(--ib) !important; }
+    .lb-date  { font-size: 11px !important; }
+    .lb-top1 td { background: rgba(255,215,0,.05); }
+    .lb-top2 td { background: rgba(192,192,192,.03); }
+    .lb-top3 td { background: rgba(205,127,50,.03); }
+    .lb-empty { text-align: center !important; color: var(--dim) !important; font-size: 12px !important; letter-spacing: 2px; padding: 30px 16px !important; }
+
+    .lb-new-row td { animation: newRowGlow 2s ease-in-out 3; }
+    @keyframes newRowGlow {
+      0%,100% { background: transparent; }
+      50%      { background: rgba(204,68,255,.18); }
+    }
+
+    /* ── Mode select overlay ── */
+    .mode-select {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(13,0,21,.97);
+      display: flex; align-items: center;
+      justify-content: center; flex-direction: column;
+      gap: 20px; text-align: center;
+      padding: 24px 16px;
+      overflow-y: auto; overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      animation: victIn .6s ease;
+    }
+    .mode-select.hide { display: none; }
+
+    .ms-eyebrow { font-size: 9px; letter-spacing: 8px; text-transform: uppercase; color: var(--np); opacity: .65; }
+    .ms-heading  {
+      font-size: clamp(24px, 5vw, 44px); font-weight: 900;
+      letter-spacing: 4px; text-transform: uppercase;
+      text-shadow: 0 0 20px rgba(139,0,255,.7), 0 0 50px rgba(51,102,255,.3);
+    }
+    .ms-sub { font-size: 11px; letter-spacing: 5px; color: var(--dim); }
+
+    .ms-options {
+      display: flex; gap: 18px; flex-wrap: wrap;
+      justify-content: center; margin-top: 10px;
+    }
+
+    .ms-card {
+      width: 172px; padding: 30px 18px 24px;
+      background: rgba(20,0,44,.7);
+      border: 1px solid rgba(139,0,255,.3);
+      cursor: pointer; position: relative;
+      transition: transform .25s, border-color .28s, box-shadow .28s;
+      backdrop-filter: blur(8px);
+    }
+    .ms-card:hover {
+      transform: translateY(-8px);
+      border-color: var(--np);
+      box-shadow: 0 0 28px rgba(204,68,255,.45), inset 0 0 20px rgba(139,0,255,.08);
+    }
+    .ms-card.featured {
+      border-color: rgba(204,68,255,.55);
+      box-shadow: 0 0 20px rgba(204,68,255,.22);
+    }
+    .ms-badge {
+      position: absolute; top: -11px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 7px; letter-spacing: 3px; text-transform: uppercase;
+      background: var(--ep); color: #fff;
+      padding: 3px 14px; white-space: nowrap;
+    }
+    .ms-cards-count {
+      font-size: 56px; font-weight: 900; line-height: 1;
+      background: linear-gradient(135deg, var(--np) 0%, var(--eb) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 10px rgba(204,68,255,.6));
+    }
+    .ms-cards-label {
+      font-size: 8px; letter-spacing: 3px;
+      color: var(--dim); text-transform: uppercase;
+      margin-top: 2px;
+    }
+    .ms-name {
+      font-size: 17px; font-weight: 900;
+      letter-spacing: 4px; text-transform: uppercase;
+      color: var(--text); margin-top: 14px;
+    }
+    .ms-kr { font-size: 11px; color: var(--np); opacity: .7; letter-spacing: 2px; margin-top: 3px; }
+    .ms-desc {
+      font-size: 8px; letter-spacing: 1.5px; line-height: 1.6;
+      color: var(--dim); text-transform: uppercase; margin-top: 12px;
+    }
+
+    /* ── Music button ── */
+    .music-btn {
+      margin-top: 12px;
+      padding: 7px 22px;
+      background: transparent;
+      border: 1px solid rgba(139,0,255,.4);
+      color: var(--dim); font-family: inherit;
+      font-size: 9px; letter-spacing: 5px; text-transform: uppercase;
+      cursor: pointer; transition: color .25s, border-color .25s, box-shadow .25s;
+      border-radius: 2px;
+    }
+    .music-btn:hover { color: var(--np); border-color: var(--np); box-shadow: 0 0 10px rgba(204,68,255,.3); }
+    .music-btn.on  { color: var(--np); border-color: rgba(204,68,255,.6); box-shadow: 0 0 10px rgba(204,68,255,.25); }
+    .music-btn.on::before { content: '▶ '; }
+    .music-btn.off::before { content: '■ '; }
+
+    /* ── Responsive ── */
+
+    /* Tablets / large phones */
+    @media (max-width: 620px) {
+      :root { --cw: 80px; --ch: 110px; }
+      .wrap  { padding: 22px 14px 36px; }
+      .board { gap: 8px; }
+
+      .band-tag     { font-size: 8px; letter-spacing: 5px; padding: 4px 12px; margin-bottom: 10px; }
+      .glitch-title { letter-spacing: 2px; }
+      .subtitle     { font-size: 9px; letter-spacing: 3px; }
+      .rule         { margin: 16px 0; }
+
+      .scoreboard   { margin-bottom: 20px; }
+      .stat         { padding: 10px 16px; }
+      .stat-lbl     { font-size: 7px; letter-spacing: 2px; }
+      .stat-val     { font-size: 20px; letter-spacing: 1px; }
+
+      .card-emoji   { font-size: 26px; }
+      .card-name    { font-size: 11px; letter-spacing: 1px; }
+      .card-kr, .card-power { font-size: 7px; letter-spacing: 1px; }
+
+      .btn          { padding: 10px 26px; font-size: 9px; letter-spacing: 3px; margin-top: 18px; }
+      .music-btn    { font-size: 8px; letter-spacing: 3px; padding: 6px 16px; }
+
+      /* Mode select — 3 compact cards in one row */
+      .ms-heading     { font-size: clamp(18px, 5vw, 26px); letter-spacing: 2px; }
+      .ms-sub         { font-size: 9px; letter-spacing: 2px; }
+      .ms-options     { gap: 10px; padding: 0; }
+      .ms-card        { width: calc(33.33% - 7px); min-width: 0; padding: 18px 8px 16px; }
+      .ms-badge       { font-size: 6px; padding: 2px 8px; top: -8px; }
+      .ms-cards-count { font-size: 34px; }
+      .ms-cards-label { font-size: 7px; }
+      .ms-name        { font-size: 12px; letter-spacing: 2px; margin-top: 8px; }
+      .ms-kr          { font-size: 9px; margin-top: 2px; }
+      .ms-desc        { font-size: 7px; margin-top: 6px; }
+
+      /* Victory */
+      .victory        { padding: 18px 14px; }
+      .v-tag          { font-size: 7px; letter-spacing: 5px; margin-bottom: 4px; }
+      .v-win          { font-size: clamp(40px, 12vw, 60px); margin-bottom: 3px; }
+      .v-congrats     { font-size: clamp(16px, 5vw, 24px); letter-spacing: 2px; }
+      .v-congrats-sub { font-size: 9px; letter-spacing: 2px; margin-bottom: 12px; }
+      .v-results      { margin-bottom: 10px; }
+      .v-result-item  { padding: 9px 12px; }
+      .v-result-lbl   { font-size: 7px; letter-spacing: 2px; }
+      .v-result-val   { font-size: 18px; }
+      .v-rating       { margin-bottom: 10px; }
+      .v-stars        { font-size: 20px; letter-spacing: 4px; }
+      .v-rank         { font-size: 8px; letter-spacing: 3px; }
+      .v-message-card { padding: 14px 14px; margin-bottom: 12px; }
+      .v-message-from { font-size: 7px; letter-spacing: 3px; }
+      .v-message-text { font-size: 12px; line-height: 1.65; }
+      .v-sig          { font-size: 11px; margin-top: 10px; }
+      .v-hs-banner    { font-size: 11px; letter-spacing: 2px; }
+      .v-hs-input     { width: 150px; font-size: 12px; padding: 9px 12px; }
+
+      /* Leaderboard */
+      .lb-title       { font-size: clamp(20px, 5vw, 30px); letter-spacing: 3px; }
+      .lb-eyebrow     { font-size: 8px; }
+      .lb-tabs        { width: 100%; }
+      .lb-tab         { padding: 8px 0; font-size: 8px; letter-spacing: 1px; flex: 1; text-align: center; }
+      .lb-table-wrap  { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .lb-table thead th { padding: 9px 10px; font-size: 7px; letter-spacing: 2px; }
+      .lb-row td      { padding: 9px 10px; font-size: 11px; }
+      .lb-rank        { font-size: 14px !important; width: 28px; }
+      .lb-empty       { font-size: 11px !important; padding: 22px 10px !important; }
+    }
+
+    /* Small phones — iPhone SE, 375px */
+    @media (max-width: 400px) {
+      :root { --cw: 72px; --ch: 100px; }
+      .board { gap: 6px; }
+
+      .wrap         { padding: 18px 10px 28px; }
+      .card-emoji   { font-size: 22px; }
+      .card-name    { font-size: 9px; }
+      .card-kr, .card-power { font-size: 6px; }
+
+      .stat         { padding: 8px 10px; }
+      .stat-val     { font-size: 17px; }
+
+      .ms-card      { padding: 14px 6px 12px; }
+      .ms-cards-count { font-size: 28px; }
+      .ms-name      { font-size: 10px; letter-spacing: 1px; }
+      .ms-kr        { font-size: 8px; }
+      .ms-desc      { display: none; } /* hide on very small screens */
+
+      .v-hs-input   { width: 130px; font-size: 11px; padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-mesh"></div>
+<canvas id="sparkles"></canvas>
+<div class="scanlines"></div>
+
+<div class="wrap">
+  <header>
+    <div class="band-tag">★ &nbsp; KPop Demon Hunters &nbsp; ★</div>
+    <div class="glitch-wrap">
+      <h1 class="glitch-title" data-text="Laura's Memory Game">Laura's Memory Game</h1>
+    </div>
+    <p class="subtitle">Match the Hunters · Defeat the Darkness</p>
+  </header>
+
+  <div class="rule">
+    <div class="rule-line"></div>
+    <span class="rule-gem">✦</span>
+    <div class="rule-line"></div>
+  </div>
+
+  <div class="scoreboard">
+    <div class="stat">
+      <span class="stat-lbl">Moves</span>
+      <span class="stat-val" id="sMoves">0</span>
+    </div>
+    <div class="stat">
+      <span class="stat-lbl">Matched</span>
+      <span class="stat-val" id="sMatched">0/8</span>
+    </div>
+    <div class="stat">
+      <span class="stat-lbl">Time</span>
+      <span class="stat-val" id="sTimer">0:00</span>
+    </div>
+  </div>
+
+  <div class="board" id="board"></div>
+  <button class="btn" id="restartBtn"><span>✦ &nbsp; New Game</span></button>
+  <button class="music-btn off" id="musicBtn">Music</button>
+</div>
+
+<!-- Mode select overlay -->
+<div class="mode-select" id="modeSelect">
+  <div class="ms-eyebrow">★ KPop Demon Hunters ★</div>
+  <div class="ms-heading">Laura's Memory Game</div>
+  <div class="ms-sub">Choose your challenge · 난이도를 선택하세요</div>
+
+  <div class="ms-options">
+    <div class="ms-card" id="ms4" onclick="buildBoard(4)">
+      <div class="ms-cards-count">8</div>
+      <div class="ms-cards-label">Cards</div>
+      <div class="ms-name">Trainee</div>
+      <div class="ms-kr">연습생</div>
+      <div class="ms-desc">4 pairs<br>Perfect for beginners</div>
+    </div>
+
+    <div class="ms-card featured" id="ms6" onclick="buildBoard(6)">
+      <div class="ms-badge">★ Popular</div>
+      <div class="ms-cards-count">12</div>
+      <div class="ms-cards-label">Cards</div>
+      <div class="ms-name">Idol</div>
+      <div class="ms-kr">아이돌</div>
+      <div class="ms-desc">6 pairs<br>The classic challenge</div>
+    </div>
+
+    <div class="ms-card" id="ms8" onclick="buildBoard(8)">
+      <div class="ms-cards-count">16</div>
+      <div class="ms-cards-label">Cards</div>
+      <div class="ms-name">Legend</div>
+      <div class="ms-kr">전설</div>
+      <div class="ms-desc">8 pairs<br>All hunters unleashed</div>
+    </div>
+  </div>
+  <button class="btn" onclick="showLeaderboard(null)" style="margin-top:8px"><span>🏆 &nbsp; Leaderboard</span></button>
+</div>
+
+<!-- Victory overlay -->
+<div class="victory" id="victory">
+
+  <div class="v-tag">✦ &nbsp; All Demons Defeated &nbsp; ✦</div>
+  <div class="v-win">승리!</div>
+  <div class="v-congrats">Congratulations!</div>
+  <div class="v-congrats-sub">You are a true Demon Hunter</div>
+
+  <!-- Results -->
+  <div class="v-results">
+    <div class="v-result-item">
+      <span class="v-result-lbl">Mode</span>
+      <span class="v-result-val" id="fMode">—</span>
+    </div>
+    <div class="v-result-item">
+      <span class="v-result-lbl">Moves</span>
+      <span class="v-result-val" id="fMoves">—</span>
+    </div>
+    <div class="v-result-item">
+      <span class="v-result-lbl">Time</span>
+      <span class="v-result-val" id="fTime">—</span>
+    </div>
+  </div>
+
+  <!-- Star rating -->
+  <div class="v-rating">
+    <span class="v-stars" id="fStars">⭐⭐⭐</span>
+    <span class="v-rank"  id="fRank">Flawless Hunter</span>
+  </div>
+
+  <!-- High score entry (shown only if qualifying) -->
+  <div class="v-hs-banner" id="vHsBanner">🏆 &nbsp; New High Score!</div>
+  <div class="v-hs-entry" id="vHsEntry">
+    <div class="v-hs-hint">Enter your name to save your score</div>
+    <div class="v-hs-row">
+      <input class="v-hs-input" id="vHsName" maxlength="16" placeholder="Your name…" />
+      <button class="v-hs-save" id="vHsSave">Save ✦</button>
+    </div>
+  </div>
+
+  <!-- Laura's personal message -->
+  <div class="v-message-card">
+    <div class="v-message-from">💜 &nbsp; A note from Laura &nbsp; 💜</div>
+    <p class="v-message-text">
+      Thank you so much for playing <em>Laura's Memory Game</em>!
+      It truly means the world to me. 💜<br><br>
+      I hope the <em>KPop Demon Hunters</em> brought a smile to your face
+      and that you had as much fun playing as I had creating this.
+      You are absolutely amazing — come back and play again soon!
+    </p>
+    <div class="v-sig">With love, <span>Laura</span> &nbsp;✦</div>
+  </div>
+
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+    <button class="btn" id="victBtn"><span>✦ &nbsp; Play Again</span></button>
+    <button class="btn" onclick="showLeaderboard(null)"><span>🏆 &nbsp; Leaderboard</span></button>
+  </div>
+
+</div>
+
+<!-- Leaderboard overlay -->
+<div class="leaderboard" id="leaderboard">
+  <div style="text-align:center">
+    <div class="lb-eyebrow">✦ &nbsp; Hall of Fame &nbsp; ✦</div>
+    <div class="lb-title">Leaderboard</div>
+  </div>
+
+  <div class="lb-tabs">
+    <button class="lb-tab" id="lb-tab-trainee" onclick="renderLeaderboard('trainee')">Trainee &nbsp; 연습생</button>
+    <button class="lb-tab" id="lb-tab-idol"    onclick="renderLeaderboard('idol')">Idol &nbsp; 아이돌</button>
+    <button class="lb-tab" id="lb-tab-legend"  onclick="renderLeaderboard('legend')">Legend &nbsp; 전설</button>
+  </div>
+
+  <div class="lb-table-wrap">
+    <table class="lb-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Time</th>
+          <th>Moves</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody id="lb-body"></tbody>
+    </table>
+  </div>
+
+  <button class="btn" onclick="hideLeaderboard()"><span>← &nbsp; Back</span></button>
+</div>
+
+<script>
+/* ── Characters ───────────────────────────── */
+const CHARS = [
+  { id:'luna',  name:'LUNA',  kr:'루나',   power:'Moonlit Blade',  emoji:'🌙', cls:'ch-luna'  },
+  { id:'yuna',  name:'YUNA',  kr:'유나',   power:'Star Burst',     emoji:'✨', cls:'ch-yuna'  },
+  { id:'seira', name:'SEIRA', kr:'세이라',  power:'Shadow Hunter',  emoji:'🐍', cls:'ch-seira' },
+  { id:'hana',  name:'HANA',  kr:'하나',   power:'Petal Storm',    emoji:'🌸', cls:'ch-hana'  },
+  { id:'mira',  name:'MIRA',  kr:'미라',   power:'Crystal Shard',  emoji:'💎', cls:'ch-mira'  },
+  { id:'jiwoo', name:'JIWOO', kr:'지우',   power:'Thunder Strike', emoji:'⚡', cls:'ch-jiwoo' },
+  { id:'dasom', name:'DASOM', kr:'다솜',   power:'Cosmic Flame',   emoji:'🔮', cls:'ch-dasom' },
+  { id:'yuki',  name:'YUKI',  kr:'유키',   power:'Void Walker',    emoji:'🌀', cls:'ch-yuki'  },
+];
+
+/* ── State ──────────────────────────────── */
+let open=[], matched=0, moves=0, locked=false;
+let timerOn=false, startMs=0, rafId=null;
+let currentPairs = 8;
+let finalMs = 0;
+
+/* ── Utils ──────────────────────────────── */
+const shuffle = a => { const b=[...a]; for(let i=b.length-1;i>0;i--){ const j=0|Math.random()*(i+1); [b[i],b[j]]=[b[j],b[i]]; } return b; };
+const fmt     = ms => { const s=Math.floor(ms/1e3); return `${0|s/60}:${(s%60+'').padStart(2,'0')}`; };
+const $       = id => document.getElementById(id);
+
+/* ── Sound FX (Web Audio API) ───────────── */
+let _ac = null;
+function ac() { return _ac || (_ac = new (window.AudioContext || window.webkitAudioContext)()); }
+
+function _osc(type, freq, vol, start, dur, freqEnd) {
+  const ctx = ac();
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = type;
+  o.frequency.setValueAtTime(freq, start);
+  if (freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, start + dur);
+  g.gain.setValueAtTime(0, start);
+  g.gain.linearRampToValueAtTime(vol, start + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+  o.start(start); o.stop(start + dur + 0.01);
+}
+
+function playFlip() {
+  const t = ac().currentTime;
+  // Quick synth blip: short freq sweep down + soft noise layer
+  _osc('triangle', 900, 0.12, t,       0.08, 520);
+  _osc('sine',     520, 0.06, t+0.04,  0.07, 320);
+}
+
+function playMatch() {
+  const t = ac().currentTime;
+  // Sparkling ascending arpeggio — C5 → E5 → G5 → C6
+  [[523.25, 0], [659.25, 0.1], [783.99, 0.2], [1046.5, 0.32]].forEach(([freq, delay]) => {
+    _osc('sine',     freq,       0.18, t+delay, 0.45);
+    _osc('triangle', freq * 2,   0.06, t+delay, 0.25); // subtle shimmer overtone
+  });
+}
+
+function playWrong() {
+  const t = ac().currentTime;
+  // Low electronic thud — descending sawtooth
+  _osc('sawtooth', 220, 0.12, t,      0.18, 80);
+  _osc('sine',     110, 0.08, t+0.05, 0.15);
+}
+
+function playVictory() {
+  const t = ac().currentTime;
+  // Triumphant synth fanfare
+  const melody = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568, 2093];
+  melody.forEach((freq, i) => {
+    const d = i * 0.13;
+    _osc('sine',     freq,     0.22, t+d, 0.55);
+    _osc('triangle', freq*1.5, 0.07, t+d, 0.35);
+  });
+  // Final chord bloom
+  [523.25, 659.25, 783.99, 1046.5].forEach(freq => {
+    _osc('sine', freq, 0.12, t+1.0, 1.0);
+  });
+}
+
+function playStart() {
+  const t = ac().currentTime;
+  // Dramatic stage-entrance sweep: low bass whoosh rising into a bright synth sting
+  _osc('sine',     80,   0.18, t,      0.35, 260);   // bass rise
+  _osc('triangle', 260,  0.10, t+0.15, 0.25, 520);   // mid punch
+  // Sparkle cascade — three quick ascending blips
+  [[880, 0.30], [1108, 0.40], [1318.5, 0.50]].forEach(([freq, delay]) => {
+    _osc('sine',     freq,   0.14, t+delay, 0.28);
+    _osc('triangle', freq*2, 0.04, t+delay, 0.16);   // airy overtone
+  });
+}
+
+/* ── Timer ──────────────────────────────── */
+function tick()  { if(!timerOn) return; $('sTimer').textContent=fmt(performance.now()-startMs); rafId=requestAnimationFrame(tick); }
+function startTimer() { if(timerOn) return; timerOn=true; startMs=performance.now(); tick(); }
+function stopTimer()  { timerOn=false; cancelAnimationFrame(rafId); }
+
+/* ── Build board ────────────────────────── */
+function showModeSelect() {
+  $('modeSelect').classList.remove('hide');
+}
+
+function buildBoard(pairs) {
+  currentPairs = pairs;
+  $('modeSelect').classList.add('hide');
+
+  // Pick 'pairs' characters — shuffle the roster so lower difficulties vary
+  const selected = shuffle([...CHARS]).slice(0, pairs);
+  const deck     = shuffle([...selected, ...selected]);
+
+  // Grid: always 4 columns (8 cards = 4×2, 12 = 4×3, 16 = 4×4)
+  const board = $('board');
+  board.style.gridTemplateColumns = `repeat(4, var(--cw))`;
+  board.innerHTML = '';
+
+  deck.forEach((ch, i) => {
+    const d = document.createElement('div');
+    d.className = `card ${ch.cls}`;
+    d.style.animationDelay = `${i * .045}s`;
+    d.dataset.id = ch.id;
+    d.innerHTML = `
+      <div class="back">
+        <div class="back-inner">
+          <div class="back-icon">◈</div>
+          <div class="back-lbl">Demon Hunters</div>
+        </div>
+      </div>
+      <div class="face">
+        <div class="card-emoji">${ch.emoji}</div>
+        <div class="card-name">${ch.name}</div>
+        <div class="card-kr">${ch.kr}</div>
+        <div class="card-power">${ch.power}</div>
+      </div>`;
+    d.addEventListener('click', onCardClick);
+    board.appendChild(d);
+  });
+
+  open=[]; matched=0; moves=0; locked=false;
+  $('sMoves').textContent  = '0';
+  $('sMatched').textContent= `0/${pairs}`;
+  $('sTimer').textContent  = '0:00';
+  stopTimer(); timerOn=false;
+
+  // Auto-start music and sync button state
+  if (!musicPlaying) {
+    startMusic();
+    const btn = $('musicBtn');
+    btn.textContent = 'Music'; btn.className = 'music-btn on';
+  }
+}
+
+/* ── Game logic ─────────────────────────── */
+function onCardClick(e) {
+  const card = e.currentTarget;
+  if(locked || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+  if(open.length >= 2) return;
+  startTimer();
+  playFlip();
+  card.classList.add('flipped');
+  open.push(card);
+  if(open.length === 2) { moves++; $('sMoves').textContent=moves; locked=true; checkMatch(); }
+}
+
+function checkMatch() {
+  const [a,b] = open;
+  if(a.dataset.id === b.dataset.id) {
+    setTimeout(() => {
+      playMatch();
+      a.classList.add('matched');
+      b.classList.add('matched');
+      matched++;
+      $('sMatched').textContent = `${matched}/${currentPairs}`;
+      open=[]; locked=false;
+      if(matched === currentPairs) { finalMs = performance.now() - startMs; stopTimer(); setTimeout(showVictory, 600); }
+    }, 300);
+  } else {
+    setTimeout(() => {
+      playWrong();
+      a.classList.add('wrong'); b.classList.add('wrong');
+      setTimeout(() => {
+        a.classList.remove('flipped','wrong');
+        b.classList.remove('flipped','wrong');
+        open=[]; locked=false;
+      }, 440);
+    }, 700);
+  }
+}
+
+function showVictory() {
+  const modeNames = { 4:'Trainee', 6:'Idol', 8:'Legend' };
+  const timeStr   = $('sTimer').textContent;
+
+  $('fMode').textContent  = modeNames[currentPairs] || currentPairs + ' pairs';
+  $('fMoves').textContent = moves;
+  $('fTime').textContent  = timeStr;
+
+  // Star rating
+  let stars, rank;
+  if      (moves <= currentPairs * 2) { stars = '⭐⭐⭐'; rank = 'Flawless Hunter'; }
+  else if (moves <= currentPairs * 3) { stars = '⭐⭐';   rank = 'Skilled Hunter';  }
+  else                                 { stars = '⭐';     rank = 'Demon Slayer';     }
+  $('fStars').textContent = stars;
+  $('fRank').textContent  = rank;
+
+  // High score check
+  const hs = isHighScore(currentPairs, finalMs);
+  $('vHsBanner').style.display = hs ? 'block' : 'none';
+  $('vHsEntry').style.display  = hs ? 'flex'  : 'none';
+  $('vHsName').value = '';
+
+  $('victory').classList.add('show');
+  burstSparkles(180);
+  playVictory();
+}
+
+$('restartBtn').addEventListener('click', () => { $('victory').classList.remove('show'); showModeSelect(); });
+$('victBtn').addEventListener('click',    () => { $('victory').classList.remove('show'); showModeSelect(); });
+
+/* ── Sparkle FX ─────────────────────────── */
+const cvs = $('sparkles');
+const gx  = cvs.getContext('2d');
+
+function resize() { cvs.width=window.innerWidth; cvs.height=window.innerHeight; }
+resize(); window.addEventListener('resize', resize);
+
+const PALETTE = [
+  'rgba(204,68,255,',   // neon purple
+  'rgba(139,0,255,',    // electric purple
+  'rgba(51,102,255,',   // electric blue
+  'rgba(136,170,255,',  // ice blue
+  'rgba(170,102,255,',  // lavender
+  'rgba(255,0,128,',    // hot pink (rare)
+];
+
+class Sparkle {
+  constructor(burst=false) { this.burst=burst; this.reset(); }
+  reset() {
+    if(this.burst) {
+      this.x  = cvs.width/2  + (Math.random()-.5)*420;
+      this.y  = cvs.height/2 + (Math.random()-.5)*320;
+      this.vy = -(Math.random()*5.5+1.2);
+      this.vx = (Math.random()-.5)*5;
+      this.decay = Math.random()*.02+.01;
+    } else {
+      this.x  = Math.random()*cvs.width;
+      this.y  = Math.random()*cvs.height;
+      this.vy = -(Math.random()*.65+.15);
+      this.vx = (Math.random()-.5)*.35;
+      this.decay = Math.random()*.0035+.0007;
+    }
+    this.r    = Math.random()*1.8+.4;
+    this.life = 1;
+    this.col  = PALETTE[0|Math.random()*PALETTE.length];
+    this.star = Math.random() > .55; // star vs circle
+  }
+  step() { this.y+=this.vy; this.x+=this.vx; this.life-=this.decay; }
+  dead() { return this.life<=0||this.y<-10; }
+  draw() {
+    const a = this.life*.7;
+    gx.fillStyle = this.col+a+')';
+    if(this.star) {
+      gx.save(); gx.translate(this.x,this.y); gx.rotate(Math.PI/4);
+      gx.fillRect(-this.r,-this.r,this.r*2,this.r*2);
+      gx.restore();
+    } else {
+      gx.beginPath(); gx.arc(this.x,this.y,this.r,0,Math.PI*2); gx.fill();
+    }
+  }
+}
+
+// Ambient pool
+const pool = Array.from({length:85}, () => {
+  const s = new Sparkle();
+  s.y = Math.random()*cvs.height;
+  return s;
+});
+const bursts = [];
+
+function burstSparkles(n) { for(let i=0;i<n;i++) bursts.push(new Sparkle(true)); }
+
+(function loop() {
+  gx.clearRect(0,0,cvs.width,cvs.height);
+  pool.forEach(s => { s.step(); s.draw(); if(s.dead()) s.reset(); });
+  for(let i=bursts.length-1; i>=0; i--) {
+    bursts[i].step(); bursts[i].draw();
+    if(bursts[i].dead()) bursts.splice(i,1);
+  }
+  requestAnimationFrame(loop);
+})();
+
+/* ── App Icon (favicon + apple-touch-icon) ── */
+(function buildIcon() {
+  const S = 512, c = document.createElement('canvas');
+  c.width = c.height = S;
+  const x = c.getContext('2d');
+
+  // Rounded-rect bg
+  const r = 108;
+  x.beginPath();
+  x.moveTo(r, 0); x.lineTo(S-r, 0); x.arcTo(S, 0,   S,   r,   r);
+  x.lineTo(S, S-r);                  x.arcTo(S, S,   S-r, S,   r);
+  x.lineTo(r, S);                    x.arcTo(0, S,   0,   S-r, r);
+  x.lineTo(0, r);                    x.arcTo(0, 0,   r,   0,   r);
+  x.closePath();
+  const bgGrad = x.createRadialGradient(S*.35, S*.3, 0, S/2, S/2, S*.62);
+  bgGrad.addColorStop(0, '#2A0055'); bgGrad.addColorStop(1, '#0D0015');
+  x.fillStyle = bgGrad; x.fill();
+
+  // Outer glow ring
+  const rg = x.createRadialGradient(S/2, S/2, S*.28, S/2, S/2, S*.48);
+  rg.addColorStop(0, 'rgba(139,0,255,.28)'); rg.addColorStop(1, 'rgba(139,0,255,0)');
+  x.beginPath(); x.arc(S/2, S/2, S*.48, 0, Math.PI*2); x.fillStyle=rg; x.fill();
+
+  // 4-pointed star
+  const starGrad = x.createLinearGradient(80, 80, S-80, S-80);
+  starGrad.addColorStop(0, '#DD66FF');
+  starGrad.addColorStop(0.5, '#8B00FF');
+  starGrad.addColorStop(1, '#3366FF');
+
+  const cx=S/2, cy=S/2, R1=198, R2=68;
+  x.beginPath();
+  for (let i=0; i<8; i++) {
+    const ang = (i * Math.PI/4) - Math.PI/2;
+    const rad = i%2===0 ? R1 : R2;
+    const px = cx + rad*Math.cos(ang), py = cy + rad*Math.sin(ang);
+    i===0 ? x.moveTo(px,py) : x.lineTo(px,py);
+  }
+  x.closePath();
+  x.shadowColor='#CC44FF'; x.shadowBlur=28;
+  x.fillStyle=starGrad; x.fill(); x.fill(); // double-fill deepens glow
+
+  // Inner sparkle dot
+  x.shadowBlur=0;
+  const sg2 = x.createRadialGradient(cx,cy,0,cx,cy,55);
+  sg2.addColorStop(0,'rgba(255,255,255,.95)'); sg2.addColorStop(1,'rgba(240,238,255,0)');
+  x.beginPath(); x.arc(cx,cy,55,0,Math.PI*2); x.fillStyle=sg2; x.fill();
+
+  // "L" letter mark
+  x.shadowBlur=0; x.fillStyle='rgba(240,238,255,.88)';
+  x.font=`900 ${S*.21}px 'Trebuchet MS',sans-serif`;
+  x.textAlign='center'; x.textBaseline='middle';
+  x.fillText('L', cx, cy+S*.03);
+
+  const url = c.toDataURL('image/png');
+  document.getElementById('ati').href = url;
+  document.getElementById('fav').href = url;
+})();
+
+/* ── Background Music ───────────────────────── */
+let musicPlaying = false;
+let mGain = null;
+let mTimer = null;
+let mNextBar = 0;
+let mBar = 0;
+
+const M_BPM   = 120;
+const M_BEAT  = 60 / M_BPM;        // 0.5s
+const M_STEP  = M_BEAT / 2;        // 0.25s — 8th note
+const M_BAR   = M_BEAT * 4;        // 2s
+const M_AHEAD = 0.25;              // schedule 250ms ahead
+const M_TICK  = 100;               // check every 100ms
+
+// Am – F – C – Em chord progression (2 bars each, 8-bar loop)
+const M_CHORDS = [
+  { root: 110.00, pad: [110.00, 130.81, 164.81, 220.00] }, // Am
+  { root:  87.31, pad: [ 87.31, 110.00, 130.81, 174.61] }, // F
+  { root: 130.81, pad: [130.81, 164.81, 196.00, 261.63] }, // C
+  { root:  82.41, pad: [ 82.41,  98.00, 123.47, 164.81] }, // Em
+];
+
+// Lead melody: A-minor pentatonic, 2 notes per bar × 8 bars (0 = rest)
+const M_MELODY = [
+  440, 523.25,   659.25, 880,     783.99, 659.25,   587.33, 523.25,
+  440, 0,         392.00, 440,    659.25, 587.33,    523.25, 440,
+];
+
+function mCtx() { return ac(); }
+
+function mMasterGain() {
+  if (!mGain) {
+    mGain = mCtx().createGain();
+    mGain.gain.value = 0;              // starts silent; fades in
+    mGain.connect(mCtx().destination);
+  }
+  return mGain;
+}
+
+// ── Drum voices ──────────────────────────────
+function mKick(t) {
+  const ctx=mCtx(), o=ctx.createOscillator(), g=ctx.createGain();
+  o.connect(g); g.connect(mMasterGain());
+  o.type='sine';
+  o.frequency.setValueAtTime(160, t);
+  o.frequency.exponentialRampToValueAtTime(0.01, t+0.38);
+  g.gain.setValueAtTime(1.0, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t+0.38);
+  o.start(t); o.stop(t+0.39);
+}
+
+function mHihat(t, open=false) {
+  const ctx=mCtx(), dur=open?0.14:0.045;
+  const buf=ctx.createBuffer(1, ctx.sampleRate*dur, ctx.sampleRate);
+  const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  const src=ctx.createBufferSource(); src.buffer=buf;
+  const hpf=ctx.createBiquadFilter(); hpf.type='highpass'; hpf.frequency.value=8000;
+  const g=ctx.createGain();
+  src.connect(hpf); hpf.connect(g); g.connect(mMasterGain());
+  g.gain.setValueAtTime(open?0.07:0.04, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+  src.start(t); src.stop(t+dur+0.01);
+}
+
+function mSnare(t) {
+  const ctx=mCtx(), dur=0.13;
+  // noise
+  const buf=ctx.createBuffer(1, ctx.sampleRate*dur, ctx.sampleRate);
+  const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  const src=ctx.createBufferSource(); src.buffer=buf;
+  const g1=ctx.createGain(); src.connect(g1); g1.connect(mMasterGain());
+  g1.gain.setValueAtTime(0.22, t); g1.gain.exponentialRampToValueAtTime(0.001, t+dur);
+  src.start(t); src.stop(t+dur+0.01);
+  // tonal thud
+  const o=ctx.createOscillator(), g2=ctx.createGain();
+  o.connect(g2); g2.connect(mMasterGain());
+  o.type='triangle'; o.frequency.value=185;
+  g2.gain.setValueAtTime(0.18, t); g2.gain.exponentialRampToValueAtTime(0.001, t+0.10);
+  o.start(t); o.stop(t+0.11);
+}
+
+// ── Harmonic voices ──────────────────────────
+function mBass(t, freq, dur) {
+  const ctx=mCtx(), o=ctx.createOscillator(), g=ctx.createGain();
+  o.connect(g); g.connect(mMasterGain());
+  o.type='sine'; o.frequency.value=freq*2; // one octave up from chord root
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.55, t+0.02);
+  g.gain.setValueAtTime(0.55, t+dur*0.72);
+  g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+  o.start(t); o.stop(t+dur+0.01);
+}
+
+function mPad(t, freqs, dur) {
+  freqs.forEach(freq => {
+    const ctx=mCtx(), o=ctx.createOscillator(), g=ctx.createGain();
+    o.connect(g); g.connect(mMasterGain());
+    o.type='sine'; o.frequency.value=freq*2;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.045, t+0.7);
+    g.gain.setValueAtTime(0.045, t+dur-0.5);
+    g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+    o.start(t); o.stop(t+dur+0.01);
+  });
+}
+
+function mLead(t, freq, dur) {
+  if (!freq) return;
+  const ctx=mCtx(), o=ctx.createOscillator(), g=ctx.createGain();
+  o.connect(g); g.connect(mMasterGain());
+  o.type='triangle'; o.frequency.value=freq;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.10, t+0.03);
+  g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+  o.start(t); o.stop(t+dur+0.01);
+}
+
+// ── Bar sequencer ────────────────────────────
+function mScheduleBar(barT, bar) {
+  const chord = M_CHORDS[Math.floor((bar % 8) / 2)];
+  const s=M_STEP, b=M_BEAT;
+
+  // Drums — 8 eighth-note steps
+  for (let i=0; i<8; i++) {
+    const t = barT + i*s;
+    if (i===0||i===4) mKick(t);
+    if (i===2||i===6) mSnare(t);
+    mHihat(t, i===5); // open hat just before snare on beat 3
+  }
+
+  // Syncopated bass pattern
+  mBass(barT,           chord.root, b*0.9);
+  mBass(barT+b,         chord.root, b*0.65);
+  mBass(barT+b*1.5,     chord.root, b*0.45);
+  mBass(barT+b*2.5,     chord.root, b*0.65);
+  mBass(barT+b*3,       chord.root, b*0.9);
+
+  // Pad (whole bar, slight overlap for legato feel)
+  mPad(barT, chord.pad, M_BAR+0.3);
+
+  // Melody: 2 notes per bar from 16-note sequence
+  const mi = (bar % 8) * 2;
+  mLead(barT,       M_MELODY[mi],   b*1.75);
+  mLead(barT+b*2,   M_MELODY[mi+1], b*1.75);
+}
+
+function mSchedule() {
+  if (!musicPlaying) return;
+  const ctx = mCtx();
+  while (mNextBar < ctx.currentTime + M_AHEAD) {
+    mScheduleBar(mNextBar, mBar);
+    mNextBar += M_BAR;
+    mBar++;
+  }
+  mTimer = setTimeout(mSchedule, M_TICK);
+}
+
+function startMusic() {
+  mMasterGain(); // ensure gain node exists
+  musicPlaying = true;
+  mNextBar = mCtx().currentTime + 0.05;
+  mBar = 0;
+  // Fade in over 1.5s
+  mGain.gain.cancelScheduledValues(mCtx().currentTime);
+  mGain.gain.setValueAtTime(0, mCtx().currentTime);
+  mGain.gain.linearRampToValueAtTime(0.42, mCtx().currentTime + 1.5);
+  mSchedule();
+}
+
+function stopMusic() {
+  musicPlaying = false;
+  clearTimeout(mTimer);
+  if (mGain) {
+    mGain.gain.cancelScheduledValues(mCtx().currentTime);
+    mGain.gain.setTargetAtTime(0, mCtx().currentTime, 0.4); // fade out
+  }
+}
+
+function toggleMusic() {
+  const btn = $('musicBtn');
+  if (musicPlaying) {
+    stopMusic();
+    btn.textContent = 'Music'; btn.className='music-btn off';
+  } else {
+    startMusic();
+    btn.textContent = 'Music'; btn.className='music-btn on';
+  }
+}
+
+$('musicBtn').addEventListener('click', toggleMusic);
+
+/* ── Leaderboard ─────────────────────────── */
+const LS_KEY    = 'lauraMemoryScores';
+const MODE_KEYS = { 4:'trainee', 6:'idol', 8:'legend' };
+const MEDALS    = ['🥇','🥈','🥉','4','5'];
+
+function loadScores() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) || { trainee:[], idol:[], legend:[] }; }
+  catch { return { trainee:[], idol:[], legend:[] }; }
+}
+function saveScores(data) { localStorage.setItem(LS_KEY, JSON.stringify(data)); }
+
+function isHighScore(pairs, ms) {
+  const list = loadScores()[MODE_KEYS[pairs]] || [];
+  return list.length < 5 || ms < list[list.length - 1].timeMs;
+}
+
+function addScore(pairs, name, ms, timeStr, numMoves) {
+  const data  = loadScores();
+  const key   = MODE_KEYS[pairs];
+  const entry = {
+    name: (name || 'Hunter').trim().slice(0, 16),
+    timeMs: ms, timeStr, moves: numMoves,
+    date: new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'2-digit' })
+  };
+  data[key].push(entry);
+  data[key].sort((a,b) => a.timeMs - b.timeMs || a.moves - b.moves);
+  data[key] = data[key].slice(0, 5);
+  saveScores(data);
+  return data[key].findIndex(e => e.timeMs === entry.timeMs && e.moves === entry.moves && e.name === entry.name);
+}
+
+function renderLeaderboard(tab) {
+  ['trainee','idol','legend'].forEach(t => {
+    const btn = $('lb-tab-' + t);
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
+
+  const scores = loadScores()[tab] || [];
+  const tbody  = $('lb-body');
+  tbody.innerHTML = '';
+
+  if (scores.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="5" class="lb-empty">No scores yet — be the first! ✦</td>`;
+    tbody.appendChild(tr); return;
+  }
+
+  for (let i = 0; i < 5; i++) {
+    const s  = scores[i];
+    const tr = document.createElement('tr');
+    tr.className = s ? `lb-row lb-top${Math.min(i+1,3)} ${tr._new?'lb-new-row':''}` : 'lb-row';
+    if (s) {
+      tr.innerHTML = `
+        <td class="lb-rank">${MEDALS[i]}</td>
+        <td class="lb-name">${s.name}</td>
+        <td class="lb-time">${s.timeStr}</td>
+        <td class="lb-moves">${s.moves}</td>
+        <td class="lb-date">${s.date}</td>`;
+    } else {
+      tr.innerHTML = `<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>`;
+      tr.style.opacity = '.2';
+    }
+    tbody.appendChild(tr);
+  }
+}
+
+function showLeaderboard(tab) {
+  const defaultTab = MODE_KEYS[currentPairs] || 'idol';
+  renderLeaderboard(tab || defaultTab);
+  $('leaderboard').classList.add('show');
+  // Highlight newly saved row if pending
+  if (window._pendingNewRank !== undefined) {
+    const rows = $('lb-body').querySelectorAll('tr.lb-row');
+    if (rows[window._pendingNewRank]) rows[window._pendingNewRank].classList.add('lb-new-row');
+    window._pendingNewRank = undefined;
+  }
+}
+function hideLeaderboard() { $('leaderboard').classList.remove('show'); }
+
+// Save button handler
+$('vHsSave').addEventListener('click', () => {
+  const name    = $('vHsName').value;
+  const timeStr = $('sTimer').textContent;
+  const rank    = addScore(currentPairs, name, finalMs, timeStr, moves);
+
+  // Hide entry form, show confirmation
+  $('vHsBanner').textContent = `✦ Saved at #${rank + 1}!`;
+  $('vHsEntry').style.display = 'none';
+
+  // Highlight new row when leaderboard opens
+  $('_newRank') && ($('_newRank').id = '');
+  window._pendingNewRank = rank;
+});
+
+// Also allow Enter key in name input
+$('vHsName').addEventListener('keydown', e => { if (e.key === 'Enter') $('vHsSave').click(); });
+
+/* ── Init ───────────────────────────────── */
+showModeSelect();
+</script>
+</body>
+</html>
