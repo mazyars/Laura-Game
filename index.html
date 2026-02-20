@@ -1173,7 +1173,7 @@ function checkMatch() {
   }
 }
 
-function showVictory() {
+async function showVictory() {
   const modeNames = { 4:'Trainee', 6:'Idol', 8:'Legend' };
   const timeStr   = $('sTimer').textContent;
 
@@ -1189,8 +1189,8 @@ function showVictory() {
   $('fStars').textContent = stars;
   $('fRank').textContent  = rank;
 
-  // High score check
-  const hs = isHighScore(currentPairs, finalMs);
+  // High score check (async — query the live board)
+  const hs = await apiIsHighScore(currentPairs, finalMs);
   $('vHsBanner').style.display = hs ? 'block' : 'none';
   $('vHsEntry').style.display  = hs ? 'flex'  : 'none';
   $('vHsName').value = '';
@@ -1524,69 +1524,77 @@ function toggleMusic() {
 
 $('musicBtn').addEventListener('click', toggleMusic);
 
-/* ── Leaderboard ─────────────────────────── */
-const LS_KEY    = 'lauraMemoryScores';
+/* ── Leaderboard — API-backed ────────────── */
 const MODE_KEYS = { 4:'trainee', 6:'idol', 8:'legend' };
 const MEDALS    = ['🥇','🥈','🥉','4','5'];
 
-function loadScores() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY)) || { trainee:[], idol:[], legend:[] }; }
-  catch { return { trainee:[], idol:[], legend:[] }; }
-}
-function saveScores(data) { localStorage.setItem(LS_KEY, JSON.stringify(data)); }
-
-function isHighScore(pairs, ms) {
-  const list = loadScores()[MODE_KEYS[pairs]] || [];
-  return list.length < 5 || ms < list[list.length - 1].timeMs;
+async function apiScores(mode) {
+  try {
+    const r = await fetch(`/api/scores/${mode}`);
+    return await r.json();
+  } catch { return []; }
 }
 
-function addScore(pairs, name, ms, timeStr, numMoves) {
-  const data  = loadScores();
-  const key   = MODE_KEYS[pairs];
-  const entry = {
-    name: (name || 'Hunter').trim().slice(0, 16),
-    timeMs: ms, timeStr, moves: numMoves,
-    date: new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'2-digit' })
-  };
-  data[key].push(entry);
-  data[key].sort((a,b) => a.timeMs - b.timeMs || a.moves - b.moves);
-  data[key] = data[key].slice(0, 5);
-  saveScores(data);
-  return data[key].findIndex(e => e.timeMs === entry.timeMs && e.moves === entry.moves && e.name === entry.name);
+async function apiSave(name, mode, timeMs, timeStr, numMoves) {
+  try {
+    const r = await fetch('/api/scores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, mode, time_ms: timeMs, time_str: timeStr, moves: numMoves })
+    });
+    return await r.json();
+  } catch { return null; }
 }
 
-function renderLeaderboard(tab) {
+async function apiIsHighScore(pairs, ms) {
+  try {
+    const scores = await apiScores(MODE_KEYS[pairs]);
+    if (!Array.isArray(scores) || scores.error) return true; // fail open
+    return scores.length < 5 || ms < (scores[scores.length - 1]?.time_ms ?? Infinity);
+  } catch { return true; }
+}
+
+async function renderLeaderboard(tab) {
   ['trainee','idol','legend'].forEach(t => {
     const btn = $('lb-tab-' + t);
     if (btn) btn.classList.toggle('active', t === tab);
   });
 
-  const scores = loadScores()[tab] || [];
-  const tbody  = $('lb-body');
+  const tbody = $('lb-body');
+  tbody.innerHTML = `<tr><td colspan="5" class="lb-empty">Loading…</td></tr>`;
+
+  const scores = await apiScores(tab);
   tbody.innerHTML = '';
 
-  if (scores.length === 0) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td colspan="5" class="lb-empty">No scores yet — be the first! ✦</td>`;
-    tbody.appendChild(tr); return;
+  if (!Array.isArray(scores) || scores.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" class="lb-empty">No scores yet — be the first! ✦</td></tr>`;
+    return;
   }
 
   for (let i = 0; i < 5; i++) {
     const s  = scores[i];
     const tr = document.createElement('tr');
-    tr.className = s ? `lb-row lb-top${Math.min(i+1,3)} ${tr._new?'lb-new-row':''}` : 'lb-row';
+    tr.className = s ? `lb-row lb-top${Math.min(i+1,3)}` : 'lb-row';
     if (s) {
+      const date = new Date(s.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'2-digit' });
       tr.innerHTML = `
         <td class="lb-rank">${MEDALS[i]}</td>
         <td class="lb-name">${s.name}</td>
-        <td class="lb-time">${s.timeStr}</td>
+        <td class="lb-time">${s.time_str}</td>
         <td class="lb-moves">${s.moves}</td>
-        <td class="lb-date">${s.date}</td>`;
+        <td class="lb-date">${date}</td>`;
     } else {
       tr.innerHTML = `<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>`;
       tr.style.opacity = '.2';
     }
     tbody.appendChild(tr);
+  }
+
+  // Highlight newly saved row
+  if (window._pendingNewRank !== undefined) {
+    const rows = tbody.querySelectorAll('tr.lb-row');
+    if (rows[window._pendingNewRank]) rows[window._pendingNewRank].classList.add('lb-new-row');
+    window._pendingNewRank = undefined;
   }
 }
 
@@ -1594,31 +1602,33 @@ function showLeaderboard(tab) {
   const defaultTab = MODE_KEYS[currentPairs] || 'idol';
   renderLeaderboard(tab || defaultTab);
   $('leaderboard').classList.add('show');
-  // Highlight newly saved row if pending
-  if (window._pendingNewRank !== undefined) {
-    const rows = $('lb-body').querySelectorAll('tr.lb-row');
-    if (rows[window._pendingNewRank]) rows[window._pendingNewRank].classList.add('lb-new-row');
-    window._pendingNewRank = undefined;
-  }
 }
 function hideLeaderboard() { $('leaderboard').classList.remove('show'); }
 
-// Save button handler
-$('vHsSave').addEventListener('click', () => {
-  const name    = $('vHsName').value;
-  const timeStr = $('sTimer').textContent;
-  const rank    = addScore(currentPairs, name, finalMs, timeStr, moves);
+// Save score handler
+$('vHsSave').addEventListener('click', async () => {
+  const name = $('vHsName').value;
+  const btn  = $('vHsSave');
+  btn.disabled = true; btn.textContent = 'Saving…';
 
-  // Hide entry form, show confirmation
-  $('vHsBanner').textContent = `✦ Saved at #${rank + 1}!`;
+  const result = await apiSave(
+    name, MODE_KEYS[currentPairs], finalMs,
+    $('sTimer').textContent, moves
+  );
+
+  // Fetch current board to find rank
+  const board = await apiScores(MODE_KEYS[currentPairs]);
+  const rank  = Array.isArray(board)
+    ? board.findIndex(s => s.id === result?.id)
+    : -1;
+
+  $('vHsBanner').textContent  = rank >= 0 ? `✦ Saved at #${rank + 1}!` : '✦ Score Saved!';
   $('vHsEntry').style.display = 'none';
+  window._pendingNewRank      = rank >= 0 ? rank : undefined;
 
-  // Highlight new row when leaderboard opens
-  $('_newRank') && ($('_newRank').id = '');
-  window._pendingNewRank = rank;
+  btn.disabled = false; btn.textContent = 'Save ✦';
 });
 
-// Also allow Enter key in name input
 $('vHsName').addEventListener('keydown', e => { if (e.key === 'Enter') $('vHsSave').click(); });
 
 /* ── Init ───────────────────────────────── */
