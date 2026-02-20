@@ -3,9 +3,14 @@ const { Pool } = require('pg');
 const path    = require('path');
 
 const app  = express();
+
+const dbUrl = process.env.DATABASE_URL;
+console.log('DATABASE_URL present:', !!dbUrl);
+console.log('DATABASE_URL host:', dbUrl ? dbUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') : 'NOT SET');
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
+  connectionString: dbUrl,
+  ssl: dbUrl ? { rejectUnauthorized: false } : false,
 });
 
 app.use(express.json());
