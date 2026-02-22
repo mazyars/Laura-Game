@@ -1607,7 +1607,8 @@ function hideLeaderboard() { $('leaderboard').classList.remove('show'); }
 
 // Save score handler
 $('vHsSave').addEventListener('click', async () => {
-  const name = $('vHsName').value;
+  const name = $('vHsName').value.trim();
+  if (!name) { $('vHsName').focus(); return; }
   const btn  = $('vHsSave');
   btn.disabled = true; btn.textContent = 'Saving…';
 
@@ -1616,10 +1617,17 @@ $('vHsSave').addEventListener('click', async () => {
     $('sTimer').textContent, moves
   );
 
+  // Check if save actually succeeded
+  if (!result || result.error || !result.id) {
+    $('vHsBanner').textContent = '⚠ Save failed — try again';
+    btn.disabled = false; btn.textContent = 'Save ✦';
+    return;
+  }
+
   // Fetch current board to find rank
   const board = await apiScores(MODE_KEYS[currentPairs]);
   const rank  = Array.isArray(board)
-    ? board.findIndex(s => s.id === result?.id)
+    ? board.findIndex(s => s.id === result.id)
     : -1;
 
   $('vHsBanner').textContent  = rank >= 0 ? `✦ Saved at #${rank + 1}!` : '✦ Score Saved!';
