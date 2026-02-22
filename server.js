@@ -7,9 +7,12 @@ const app  = express();
 const dbUrl = process.env.DATABASE_URL;
 console.log('DATABASE_URL present:', !!dbUrl);
 
+// Private Railway network doesn't need SSL; public proxy does
+const useSSL = dbUrl && !dbUrl.includes('railway.internal');
+
 const pool = new Pool({
   connectionString: dbUrl,
-  ssl: dbUrl ? { rejectUnauthorized: false } : false,
+  ssl: useSSL ? { rejectUnauthorized: false } : false,
   max: 3,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
