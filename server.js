@@ -77,6 +77,7 @@ app.post('/api/scores', async (req, res) => {
     return res.status(400).json({ error: 'Invalid mode' });
 
   name = String(name).trim().slice(0, 16) || 'Hunter';
+  time_ms = Math.round(Number(time_ms));
   try {
     const { rows } = await query(
       `INSERT INTO scores (name, mode, time_ms, time_str, moves)
